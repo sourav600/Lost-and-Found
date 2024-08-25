@@ -1,0 +1,29 @@
+server:
+  port: 5001
+
+spring:
+  application:
+    name: Lost and Found
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+  datasource:
+    url: jdbc:mysql://localhost:3306/lostAndFoundDB2
+    username: root
+    password:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+apiTitle: "Lost & Found API Documentation"
+apiDescription: "Finding Missing Person"
+apiVersion: "1.0.0"
+apiContactName: "Moinul Islam"
+apiContactEmail: "moinulmd306@gmail.com"
+apiContactUrl: "https://qryptic.net"
+
+#  spring.datasource.url=jdbc:mysql://localhost:3306/lostAndFoundDB
+#  spring.datasource.username=root
+#  spring.datasource.password=
+#
+#  spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+#  spring.jpa.hibernate.ddl-auto=update
