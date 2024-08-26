@@ -9,6 +9,7 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
+import io.swagger.v3.oas.models.media.Schema;
 
 @Configuration
 public class SwaggerConfiguration {
@@ -32,9 +33,11 @@ public class SwaggerConfiguration {
                 .addSecurityItem(
                         new SecurityRequirement().addList("bearer")
                 ).components(
-                        new Components().addSecuritySchemes(
-                                "bearer", createAPIKeyScheme()
-                        )
+                        new Components()
+                                .addSecuritySchemes("bearer", createAPIKeyScheme())
+//                                .addSchemas("MultipartFile", new Schema().type("string").format("binary"))
+
+
                 ).info(new Info()
                         .title(apiTitle)
                         .description(apiDescription)
