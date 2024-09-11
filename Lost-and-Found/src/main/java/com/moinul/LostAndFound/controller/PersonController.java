@@ -2,6 +2,7 @@ package com.moinul.LostAndFound.controller;
 
 import com.moinul.LostAndFound.model.Person;
 import com.moinul.LostAndFound.model.UserDto;
+import com.moinul.LostAndFound.service.ImageSearchService;
 import com.moinul.LostAndFound.service.PersonService;
 import com.moinul.LostAndFound.service.PersonServiceImpl;
 import com.moinul.LostAndFound.service.UserService;
@@ -17,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Base64;
 import java.util.List;
 
 import static com.moinul.LostAndFound.constant.PHOTO_DIRECTORY;
@@ -33,6 +35,9 @@ public class PersonController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private ImageSearchService imageSearchService;
 
 
     @Operation(description = "Just fill up the form with required information. It is highly recommend to provide latest info about missing one including Photo. ",
@@ -79,9 +84,19 @@ public class PersonController {
     }
 
 
+//    @PutMapping("/photo")
+//    public ResponseEntity<String> uploadPhoto(@RequestParam("id") Long id,
+//                                              @RequestParam("file")MultipartFile file,
+//                                              @RequestHeader("Authorization") String jwt) throws Exception {
+//
+//        UserDto user = userService.getUserProfile(jwt);
+//        String photoURL = service.uploadPhoto(id,file,user.getId());
+//        return ResponseEntity.ok().body(photoURL);
+//    }
+
     @PutMapping("/photo")
     public ResponseEntity<String> uploadPhoto(@RequestParam("id") Long id,
-                                              @RequestParam("file")MultipartFile file,
+                                              @RequestParam("file") MultipartFile file,
                                               @RequestHeader("Authorization") String jwt) throws Exception {
 
         UserDto user = userService.getUserProfile(jwt);
@@ -104,5 +119,16 @@ public class PersonController {
         UserDto user = userService.getUserProfile(jwt);
         service.deletePerson(personId, user.getId());
         return ResponseEntity.ok("Successfully deleted person with id: "+ personId);
+    }
+
+    @PostMapping("/search-by-image")
+    public ResponseEntity<String> searchByImage(@RequestParam("image") MultipartFile image) {
+        try {
+            String base64Image = Base64.getEncoder().encodeToString(image.getBytes());
+            String matchedPersons = service.searchPersons(base64Image);
+            return ResponseEntity.ok(matchedPersons);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error in processing image: "+e.getMessage());
+        }
     }
 }

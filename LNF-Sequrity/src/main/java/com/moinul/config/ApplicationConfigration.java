@@ -42,7 +42,8 @@ public class ApplicationConfigration {
                 CorsConfiguration cfg = new CorsConfiguration();
                 cfg.setAllowedOrigins(Arrays.asList(
                         "https://assignment-management-frontend-ms15.vercel.app",
-                        "http://localhost:3000/"
+                        "http://localhost:3000/",
+                        "https://sg.opencv.fr"
                 ));
                 cfg.setAllowedMethods(Collections.singletonList("*"));
                 cfg.setAllowCredentials(true);

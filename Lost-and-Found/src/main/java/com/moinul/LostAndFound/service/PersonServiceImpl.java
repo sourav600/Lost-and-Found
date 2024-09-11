@@ -5,15 +5,21 @@ import com.moinul.LostAndFound.model.Person;
 import com.moinul.LostAndFound.model.PersonStatus;
 import com.moinul.LostAndFound.repository.PersonRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -25,8 +31,10 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 @Service
 @AllArgsConstructor
 public class PersonServiceImpl implements PersonService{
-
     private final PersonRepository repository;
+
+    @Autowired
+    private RestTemplate restTemplate;
 
     @Override
     public Person createPerson(Person person, Long userId)  throws ResourceNotFoundException {
@@ -36,14 +44,16 @@ public class PersonServiceImpl implements PersonService{
     }
 
     @Override
-    public  String uploadPhoto(Long id, MultipartFile file, Long userId) throws ResourceNotFoundException{
+    public  String uploadPhoto(Long id, MultipartFile file, Long userId) throws  IOException{
 
         Person person = getPersonById(id);
         if (!person.getCreatedUserId().equals(userId)) {
             throw new ResourceNotFoundException("You can't update another person's post!");
         }
 
-        String photoUrl = photoFunction.apply(id.toString(), file);
+        String base64Image = encodeToBase64(file);
+        String photoUrl = photoFunction.apply(id.toString(), base64Image);
+
         person.setPhoto(photoUrl);
         repository.save(person);
         return photoUrl;
@@ -107,21 +117,78 @@ public class PersonServiceImpl implements PersonService{
         repository.deleteById(personId);
     }
 
+    @Override
+    public String searchPersons(String base64Image) throws IOException {
+
+        String url =  "https://sg.opencv.fr/compare";
+        String apiKey = "8DpB_hYNzM1NjAxYzAtM2VmMi00YThjLThiMjctYTFkYTllZTgwYjc4";
+        String searchMode = "ACCURATE";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("x-api-key", apiKey);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("accept", "application/json");
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("gallery", Collections.singletonList(base64Image));
+        requestBody.put("probe", Collections.singletonList(base64Image));
+        requestBody.put("search_mode", searchMode);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+
+        if(response.getStatusCode() == HttpStatus.OK){
+            return  response.getBody();
+        }else{
+            throw new IOException("Failed to search! " + response.getStatusCode());
+        }
+
+    }
+
     private final Function<String, String> fileExtension = fileName -> Optional.of(fileName).filter(name -> name.contains(".")).
             map(name -> "." + name.substring(fileName.lastIndexOf(".") + 1)).orElse(".png");
 
-    private  final BiFunction<String, MultipartFile, String> photoFunction= (id, image) -> {
-        String fileName = id + "_" + image.getOriginalFilename();
+//    private  final BiFunction<String, MultipartFile, String> photoFunction= (id, image) -> {
+//        String fileName = id + "_" + image.getOriginalFilename();
+//        try {
+//            Path fileStroageLocation = Paths.get(PHOTO_DIRECTORY).toAbsolutePath().normalize();
+//            if(!Files.exists(fileStroageLocation)) { Files.createDirectories(fileStroageLocation); }
+//            Files.copy(image.getInputStream(), fileStroageLocation.resolve(fileName), REPLACE_EXISTING);
+//            return ServletUriComponentsBuilder
+//                    .fromCurrentContextPath()
+//                    .path("/api/person/image/" + fileName ).toUriString();
+//        }catch (Exception exception){
+//            throw new RuntimeException("Unable to save image");
+//        }
+//    };
+//
+
+    private final BiFunction<String, String, String> photoFunction = (id, base64Image) -> {
         try {
-            Path fileStroageLocation = Paths.get(PHOTO_DIRECTORY).toAbsolutePath().normalize();
-            if(!Files.exists(fileStroageLocation)) { Files.createDirectories(fileStroageLocation); }
-            Files.copy(image.getInputStream(), fileStroageLocation.resolve(fileName), REPLACE_EXISTING);
+            byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+
+            String fileName = id + fileExtension.apply(id); // You can choose the appropriate file extension
+
+            Path fileStorageLocation = Paths.get(PHOTO_DIRECTORY).toAbsolutePath().normalize();
+
+            if (!Files.exists(fileStorageLocation)) {
+                Files.createDirectories(fileStorageLocation);
+            }
+            Path targetLocation = fileStorageLocation.resolve(fileName);
+            Files.write(targetLocation, imageBytes);
+
             return ServletUriComponentsBuilder
                     .fromCurrentContextPath()
-                    .path("/api/person/image/" + fileName ).toUriString();
-        }catch (Exception exception){
-            throw new RuntimeException("Unable to save image");
+                    .path("/api/person/image/" + fileName).toUriString();
+        } catch (Exception exception) {
+            throw new RuntimeException("Unable to save image", exception);
         }
     };
+    private String encodeToBase64(MultipartFile image) throws IOException {
+        byte[] bytes = image.getBytes();
+        return org.apache.tomcat.util.codec.binary.Base64.encodeBase64String(bytes);
+    }
+
 
 }
