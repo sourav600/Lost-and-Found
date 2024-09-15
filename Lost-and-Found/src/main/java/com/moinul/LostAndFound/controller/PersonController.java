@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 
@@ -94,9 +96,14 @@ public class PersonController {
 //        return ResponseEntity.ok().body(photoURL);
 //    }
 
-    @PutMapping("/photo")
+    @Operation(summary = "Upload Missing person photo")
+//    @PostMapping("/photo")
+    @RequestMapping(
+            path = "/photo",
+            method = RequestMethod.POST,
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> uploadPhoto(@RequestParam("id") Long id,
-                                              @RequestParam("file") MultipartFile file,
+                                              @RequestPart("file") MultipartFile file,
                                               @RequestHeader("Authorization") String jwt) throws Exception {
 
         UserDto user = userService.getUserProfile(jwt);
@@ -121,14 +128,20 @@ public class PersonController {
         return ResponseEntity.ok("Successfully deleted person with id: "+ personId);
     }
 
-    @PostMapping("/search-by-image")
-    public ResponseEntity<String> searchByImage(@RequestParam("image") MultipartFile image) {
+//    @PostMapping("/search-by-image")
+    @RequestMapping(
+        path = "/search-by-image",
+        method = RequestMethod.POST,
+        consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<List<String>> searchByImage(@RequestPart("image") MultipartFile[] image) {
         try {
-            String base64Image = Base64.getEncoder().encodeToString(image.getBytes());
-            String matchedPersons = service.searchPersons(base64Image);
+            //List<String> base64Image = Base64.getEncoder().encodeToString(image.getBytes());
+            List<String> matchedPersons = service.searchPersons(image);
             return ResponseEntity.ok(matchedPersons);
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error in processing image: "+e.getMessage());
+        }
+        catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Arrays.asList("Error in processing image: " + e.getMessage()));
         }
     }
 }

@@ -14,5 +14,5 @@ public interface PersonService {
     List<Person> getAllPerson() throws ResourceNotFoundException;
     Person updatePerson(Long personId, Person updateData, Long userId) throws ResourceNotFoundException;
     void deletePerson(Long personId, Long userId) throws Exception;
-    String searchPersons(String base64image) throws IOException;
+    List<String> searchPersons(MultipartFile[] base64image) throws IOException;
 }

@@ -23,6 +23,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.json.JSONObject;
 
 import static com.moinul.LostAndFound.constant.PHOTO_DIRECTORY;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
@@ -51,7 +52,7 @@ public class PersonServiceImpl implements PersonService{
             throw new ResourceNotFoundException("You can't update another person's post!");
         }
 
-        String base64Image = encodeToBase64(file);
+        String base64Image = Base64.getEncoder().encodeToString(file.getBytes());
         String photoUrl = photoFunction.apply(id.toString(), base64Image);
 
         person.setPhoto(photoUrl);
@@ -118,7 +119,9 @@ public class PersonServiceImpl implements PersonService{
     }
 
     @Override
-    public String searchPersons(String base64Image) throws IOException {
+    public List<String> searchPersons(MultipartFile[] base64Image) throws IOException {
+
+        List<String> galleryBase64 = convertToBase64List(base64Image);
 
         String url =  "https://sg.opencv.fr/compare";
         String apiKey = "8DpB_hYNzM1NjAxYzAtM2VmMi00YThjLThiMjctYTFkYTllZTgwYjc4";
@@ -129,40 +132,49 @@ public class PersonServiceImpl implements PersonService{
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("accept", "application/json");
 
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("gallery", Collections.singletonList(base64Image));
-        requestBody.put("probe", Collections.singletonList(base64Image));
-        requestBody.put("search_mode", searchMode);
+        List<Person> personList = getAllPerson();
+        List<String> scoreList = new ArrayList<>();
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+        for(Person person: personList){
+            String dbImage = person.getPhoto();
 
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("gallery", galleryBase64);
+            requestBody.put("probe", galleryBase64);
+            requestBody.put("search_mode", searchMode);
 
-        if(response.getStatusCode() == HttpStatus.OK){
-            return  response.getBody();
-        }else{
-            throw new IOException("Failed to search! " + response.getStatusCode());
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+
+            if(response.getStatusCode() == HttpStatus.OK){
+                String responseBody = response.getBody();
+                JSONObject jsonResponse = new JSONObject(responseBody);
+                double score = jsonResponse.getDouble("score");
+                scoreList.add("Person ID: " + person.getId() + " - Score: " + score);
+                //return  response.getBody();
+            }else{
+                throw new IOException("Failed to search! " + response.getStatusCode());
+            }
         }
+        return scoreList;
 
+    }
+
+    private List<String> convertToBase64List(MultipartFile[] images) throws IOException {
+        return Arrays.stream(images)
+                .map(image -> {
+                    try {
+                        return Base64.getEncoder().encodeToString(image.getBytes());
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to encode image", e);
+                    }
+                })
+                .collect(Collectors.toList());
     }
 
     private final Function<String, String> fileExtension = fileName -> Optional.of(fileName).filter(name -> name.contains(".")).
             map(name -> "." + name.substring(fileName.lastIndexOf(".") + 1)).orElse(".png");
 
-//    private  final BiFunction<String, MultipartFile, String> photoFunction= (id, image) -> {
-//        String fileName = id + "_" + image.getOriginalFilename();
-//        try {
-//            Path fileStroageLocation = Paths.get(PHOTO_DIRECTORY).toAbsolutePath().normalize();
-//            if(!Files.exists(fileStroageLocation)) { Files.createDirectories(fileStroageLocation); }
-//            Files.copy(image.getInputStream(), fileStroageLocation.resolve(fileName), REPLACE_EXISTING);
-//            return ServletUriComponentsBuilder
-//                    .fromCurrentContextPath()
-//                    .path("/api/person/image/" + fileName ).toUriString();
-//        }catch (Exception exception){
-//            throw new RuntimeException("Unable to save image");
-//        }
-//    };
-//
 
     private final BiFunction<String, String, String> photoFunction = (id, base64Image) -> {
         try {
@@ -185,10 +197,7 @@ public class PersonServiceImpl implements PersonService{
             throw new RuntimeException("Unable to save image", exception);
         }
     };
-    private String encodeToBase64(MultipartFile image) throws IOException {
-        byte[] bytes = image.getBytes();
-        return org.apache.tomcat.util.codec.binary.Base64.encodeBase64String(bytes);
-    }
+
 
 
 }
