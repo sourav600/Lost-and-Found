@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 
 import static com.moinul.LostAndFound.constant.PHOTO_DIRECTORY;
@@ -133,15 +134,16 @@ public class PersonController {
         path = "/search-by-image",
         method = RequestMethod.POST,
         consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<List<String>> searchByImage(@RequestPart("image") MultipartFile[] image) {
+    public ResponseEntity<List<Person>> searchByImage(@RequestPart("image") MultipartFile[] image) {
         try {
             //List<String> base64Image = Base64.getEncoder().encodeToString(image.getBytes());
-            List<String> matchedPersons = service.searchPersons(image);
+            List<Person> matchedPersons = service.searchPersonsByImage(image);
             return ResponseEntity.ok(matchedPersons);
         }
         catch (IOException e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Arrays.asList("Error in processing image: " + e.getMessage()));
+                    .body(Collections.emptyList());
         }
     }
 }

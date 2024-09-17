@@ -34,7 +34,7 @@ public class Person {
     private String missingDate;
     @Column(name="Description")
     private String description;
-    @Column(name="Photo")
+    @Column(name = "Photo")
     private String photo;
     @Column(name="Mobile No.", nullable = false)
     private Long contact;

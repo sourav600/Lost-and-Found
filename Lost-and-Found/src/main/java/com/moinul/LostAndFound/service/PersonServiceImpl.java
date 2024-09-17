@@ -2,7 +2,9 @@ package com.moinul.LostAndFound.service;
 
 import com.moinul.LostAndFound.exception.ResourceNotFoundException;
 import com.moinul.LostAndFound.model.Person;
+import com.moinul.LostAndFound.model.PersonImage;
 import com.moinul.LostAndFound.model.PersonStatus;
+import com.moinul.LostAndFound.repository.PersonImageRepository;
 import com.moinul.LostAndFound.repository.PersonRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +35,7 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 @AllArgsConstructor
 public class PersonServiceImpl implements PersonService{
     private final PersonRepository repository;
+    private final PersonImageRepository imageRepository;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -48,6 +51,7 @@ public class PersonServiceImpl implements PersonService{
     public  String uploadPhoto(Long id, MultipartFile file, Long userId) throws  IOException{
 
         Person person = getPersonById(id);
+        PersonImage personImage = new PersonImage();
         if (!person.getCreatedUserId().equals(userId)) {
             throw new ResourceNotFoundException("You can't update another person's post!");
         }
@@ -56,7 +60,12 @@ public class PersonServiceImpl implements PersonService{
         String photoUrl = photoFunction.apply(id.toString(), base64Image);
 
         person.setPhoto(photoUrl);
+        personImage.setId(id);
+        personImage.setFullName(person.getFullName());
+        personImage.setImageBase64(base64Image);
+
         repository.save(person);
+        imageRepository.save(personImage);
         return photoUrl;
     }
 
@@ -72,6 +81,14 @@ public class PersonServiceImpl implements PersonService{
         return allPerson.stream().map((person) -> (person))
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public List<PersonImage> getAllPerson64() throws ResourceNotFoundException {
+        List<PersonImage> allPerson = imageRepository.findAll();
+        return allPerson.stream().map((person) -> (person))
+                .collect(Collectors.toList());
+    }
+
 
     @Override
     public Person updatePerson(Long personId, Person updateData, Long userId) throws ResourceNotFoundException{
@@ -119,7 +136,7 @@ public class PersonServiceImpl implements PersonService{
     }
 
     @Override
-    public List<String> searchPersons(MultipartFile[] base64Image) throws IOException {
+    public List<Person> searchPersonsByImage(MultipartFile[] base64Image) throws IOException {
 
         List<String> galleryBase64 = convertToBase64List(base64Image);
 
@@ -133,30 +150,38 @@ public class PersonServiceImpl implements PersonService{
         headers.set("accept", "application/json");
 
         List<Person> personList = getAllPerson();
+        List<PersonImage> personImageList = getAllPerson64();
         List<String> scoreList = new ArrayList<>();
+        List<Person> predictPersons = new ArrayList<Person>();
 
-        for(Person person: personList){
-            String dbImage = person.getPhoto();
+        int i=0;
+        for(PersonImage person: personImageList){
+//            String dbImage = person.getPhoto();
+            String dbImage64 = person.getImageBase64();
 
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("gallery", galleryBase64);
+            requestBody.put("gallery", Collections.singletonList(dbImage64));
             requestBody.put("probe", galleryBase64);
             requestBody.put("search_mode", searchMode);
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
 
+
             if(response.getStatusCode() == HttpStatus.OK){
                 String responseBody = response.getBody();
                 JSONObject jsonResponse = new JSONObject(responseBody);
                 double score = jsonResponse.getDouble("score");
-                scoreList.add("Person ID: " + person.getId() + " - Score: " + score);
-                //return  response.getBody();
+                if(score >= 0.67) {
+                    predictPersons.add(personList.get(i));
+                }
+//                scoreList.add("Person ID: " + person.getId() + " - Score: " + score);
             }else{
                 throw new IOException("Failed to search! " + response.getStatusCode());
             }
+            ++i;
         }
-        return scoreList;
+        return predictPersons;
 
     }
 
