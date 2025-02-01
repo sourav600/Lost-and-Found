@@ -6,7 +6,15 @@
       <list>
         <option value="$PROJECT_DIR$/LNF-Sequrity/pom.xml" />
         <option value="$PROJECT_DIR$/Lost-and-Found/pom.xml" />
+        <option value="$PROJECT_DIR$/Gateway/pom.xml" />
+        <option value="$PROJECT_DIR$/eureka-server/pom.xml" />
+        <option value="$PROJECT_DIR$/GatewayApplication/pom.xml" />
       </list>
+    </option>
+    <option name="ignoredFiles">
+      <set>
+        <option value="$PROJECT_DIR$/gateway/pom.xml" />
+      </set>
     </option>
     <option name="workspaceImportForciblyTurnedOn" value="true" />
   </component>

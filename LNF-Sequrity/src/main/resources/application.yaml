@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: LNF-Sequrity
+    name: LNF-SEQURITY
 
   jpa:
     hibernate:
@@ -14,17 +14,30 @@ spring:
     password:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+#openapi:
+#  service:
+#    title: test-service doc
+#    version: 1.0.0
+#    url: http://localhost:5000
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
 apiTitle: "Lost & Found Security API Documentation"
 apiDescription: ""
 apiVersion: "1.0.0"
 apiContactName: "Moinul Islam"
 apiContactEmail: "moinulmd306@gmail.com"
 apiContactUrl: "https://qryptic.net"
-#eureka:
-#  instance:
-#    prefer-ip-address: true
-#  client:
-#    fetch-registry: true
-#    register-with-eureka: true
-#    serviceUrl:
-#      defaultZone: http://localhost:8070/eureka/
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    fetch-registry: true
+    register-with-eureka: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/

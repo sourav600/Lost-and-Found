@@ -1,0 +1,101 @@
+server:
+  port: 5000
+
+spring:
+  application:
+    name: GATEWAY-SERVICE
+
+  cloud:
+    gateway:
+      routes:
+        # Route for LNF-Security microservice
+        - id: LNF-Security
+          uri: lb://LNF-SEQURITY
+          predicates:
+            - Path=/auth/**, /api/users/**, /v3/api-docs/**, /swagger-ui.html, /swagger-ui/**, /swagger-resources/**
+
+        # Route for LostAndFound microservice
+        - id: LostAndFound
+          uri: lb://LOST-AND-FOUND
+          predicates:
+            - Path=/api/person/**, /photo/**, /image/**, /search-by-image/**, /v3/api-docs/**, /swagger-ui.html, /swagger-ui/**, /swagger-resources/**
+
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+
+swagger:
+  swagger-ui:
+    urls:
+      - url: /auth/v3/api-docs
+        name: LNF Security API
+      - url: /api/person/v3/api-docs
+        name: Lost and Found API
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    fetch-registry: true
+    register-with-eureka: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/
+
+
+#server:
+#  port: 5000
+#
+#spring:
+#  application:
+#    name: GATEWAY-SERVICE
+#
+#  cloud:
+#    gateway:
+#      routes:
+#        - id: LNF-Security
+#          uri: http://localhost:5002
+#          predicates:
+#            - Path=/auth/**, /api/users/**
+##            - Path=/lost-and-found/api/person/**, /lost-and-found/v3/api-docs/**, /lost-and-found/swagger-ui.html, /lost-and-found/swagger-ui/**
+##            - Path=/auth/**, /users/**, /v3/api-docs/**, /swagger-ui.html, /swagger-ui/**
+#
+#        - id: LostAndFound
+#          uri: http://localhost:5001
+#          predicates:
+#            - Path=/api/person/**, /photo/**, /image/**, /search-by-image/**
+##            - Path=/lnf-security/auth/**, /lnf-security/users/**, /lnf-security/v3/api-docs/**, /lnf-security/swagger-ui.html, /lnf-security/swagger-ui/**
+##            - Path=/api/person/**, /v3/api-docs/**, /swagger-ui.html, /swagger-ui/**
+#
+#
+#      default-filters:
+#        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+#      globalcors:
+#        cors-configurations:
+#          '[/**]':
+#            allowedOrigins: "*"
+#            allowedMethods: "*"
+#            allowedHeaders: "*"
+#
+##swagger:
+##  swagger-ui:
+##    urls:
+##      - url: /lost-and-found/v3/api-docs
+##        name: LNF Security API
+##      - url: /lnf-security/v3/api-docs
+##        name: Lost and Found API
+#
+#eureka:
+#  instance:
+#    prefer-ip-address: true
+#  client:
+#    fetch-registry: true
+#    register-with-eureka: true
+#    serviceUrl:
+#      defaultZone: http://localhost:8070/eureka/
+#
